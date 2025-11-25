@@ -59,7 +59,10 @@ public class UdpClientWrapper : IUdpClient
         }
     }
 
-  
+    public void Exit()
+    {
+      StopListening();
+    }
 
     public override int GetHashCode()
     {
