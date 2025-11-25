@@ -5,8 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-namespace NetSdrClient.Network
-{
+
 public class UdpClientWrapper : IUdpClient
 {
     private readonly IPEndPoint _localEndPoint;
@@ -93,5 +92,4 @@ public class UdpClientWrapper : IUdpClient
     }
 
    
-}
 }
