@@ -232,6 +232,6 @@ namespace NetSdrClientAppTests
             Assert.Throws<ArgumentOutOfRangeException>(() => 
                 NetSdrMessageHelper.GetSamples(invalidSampleSize, body).ToArray());
         }
-
+    }
        
 }
