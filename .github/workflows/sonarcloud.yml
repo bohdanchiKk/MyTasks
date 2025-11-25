@@ -82,50 +82,105 @@
 #         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 #         shell: pwsh
 
-name: SonarQube
+# name: SonarQube
+# on:
+#   push:
+#     branches:
+#       - master
+#   pull_request:
+#     types: [opened, synchronize, reopened]
+# jobs:
+#   build:
+#     name: Build and analyze
+#     runs-on: windows-latest
+#     steps:
+#       - name: Set up JDK 17
+#         uses: actions/setup-java@v4
+#         with:
+#           java-version: 17
+#           distribution: 'zulu' # Alternative distribution options are available.erer
+#       - uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysiseerer
+#       - name: Cache SonarQube Cloud packages
+#         uses: actions/cache@v4
+#         with:
+#           path: ~\sonar\cache
+#           key: ${{ runner.os }}-sonar
+#           restore-keys: ${{ runner.os }}-sonar
+#       - name: Cache SonarQube Cloud scanner
+#         id: cache-sonar-scanner
+#         uses: actions/cache@v4
+#         with:
+#           path: ${{ runner.temp }}\scanner
+#           key: ${{ runner.os }}-sonar-scanner
+#           restore-keys: ${{ runner.os }}-sonar-scanner
+#       - name: Install SonarQube Cloud scanner
+#         if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+#         shell: powershell
+#         run: |
+#           New-Item -Path ${{ runner.temp }}\scanner -ItemType Directory
+#           dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}\scanner
+#       - name: Build and analyze
+#         env:
+#           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#         shell: powershell
+#         run: |
+#           ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"bohdanchiKk_MyTasks" /o:"bohdanchikk-4" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+#           dotnet build
+#           ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+name: SonarCloud analysis
+
 on:
   push:
-    branches:
-      - master
+    branches: [ "master" ]
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches: [ "master" ]
+  workflow_dispatch:
+
+permissions:
+  pull-requests: read # allows SonarCloud to decorate PRs with analysis results
+
 jobs:
-  build:
-    name: Build and analyze
-    runs-on: windows-latest
+  sonar-check:
+    name: Sonar Check
+    runs-on: windows-latest   # безпечно для будь-яких .NET проектів
     steps:
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: 'zulu' # Alternative distribution options are available.erer
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-dotnet@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysiseerer
-      - name: Cache SonarQube Cloud packages
-        uses: actions/cache@v4
-        with:
-          path: ~\sonar\cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-      - name: Cache SonarQube Cloud scanner
-        id: cache-sonar-scanner
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}\scanner
-          key: ${{ runner.os }}-sonar-scanner
-          restore-keys: ${{ runner.os }}-sonar-scanner
-      - name: Install SonarQube Cloud scanner
-        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
-        shell: powershell
+          dotnet-version: '8.0.x'
+
+      # 1) BEGIN: SonarScanner for .NET
+      - name: SonarScanner Begin
         run: |
-          New-Item -Path ${{ runner.temp }}\scanner -ItemType Directory
-          dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}\scanner
-      - name: Build and analyze
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: powershell
-        run: |
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"bohdanchiKk_MyTasks" /o:"bohdanchikk-4" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-          dotnet build
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+              dotnet tool install --global dotnet-sonarscanner
+              echo "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
+              dotnet sonarscanner begin `
+              /k:"bohdanchiKk_MyTasks" `
+              /o:"bohdanchikk-4" `
+              /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
+              /d:sonar.cs.opencover.reportsPaths="**/coverage.xml" `
+              /d:sonar.cpd.cs.minimumTokens=40 `
+              /d:sonar.cpd.cs.minimumLines=5 `
+              /d:sonar.exclusions=**/bin/**,**/obj/**,**/sonarcloud.yml `
+              /d:sonar.qualitygate.wait=true
+        shell: pwsh
+      # 2) BUILD & TEST
+      - name: Restore
+        run: dotnet restore NetSdrClient.sln
+      - name: Build
+        run: dotnet build NetSdrClient.sln -c Release --no-restore
+      #- name: Tests with coverage (OpenCover)
+      #  run: |
+      #    dotnet test NetSdrClientAppTests/NetSdrClientAppTests.csproj -c Release --no-build `
+      #      /p:CollectCoverage=true `
+      #      /p:CoverletOutput=TestResults/coverage.xml `
+      #      /p:CoverletOutputFormat=opencover
+      #  shell: pwsh
+      # 3) END: SonarScanner
+      - name: SonarScanner End
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+        shell: pwsh
