@@ -173,7 +173,7 @@ jobs:
         run: dotnet restore NetSdrClient.sln
       - name: Build
         run: dotnet build NetSdrClient.sln -c Release --no-restore
-      #- name: Tests with coverage (OpenCover)
+      #- name: Tests with coverage (OpenCover) ddddddd
       #  run: |
       #    dotnet test NetSdrClientAppTests/NetSdrClientAppTests.csproj -c Release --no-build `
       #      /p:CollectCoverage=true `
