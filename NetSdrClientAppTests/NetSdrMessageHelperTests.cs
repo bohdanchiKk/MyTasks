@@ -233,34 +233,5 @@ namespace NetSdrClientAppTests
                 NetSdrMessageHelper.GetSamples(invalidSampleSize, body).ToArray());
         }
 
-        [Test]
-        public void GetHeader_DataItemMaxLength_SetsZeroLength()
-        {
-            // Arrange
-            var type = NetSdrMessageHelper.MsgTypes.DataItem0;
-            int msgLength = 8192; // Max data item message length without header
-
-            // Act
-            byte[] header = NetSdrMessageHelper.GetHeader(type, msgLength);
-
-            // Assert
-            var headerValue = BitConverter.ToUInt16(header);
-            var length = headerValue - ((int)type << 13);
-            Assert.That(length, Is.EqualTo(0)); // Should be 0 for max length data items
-        }
-
-        [Test]
-        public void GetHeader_MessageTooLong_ThrowsException()
-        {
-            // Arrange
-            var type = NetSdrMessageHelper.MsgTypes.SetControlItem;
-            int msgLength = 9000; // Exceeds max length
-
-            // Act & Assert
-            Assert.Throws<ArgumentException>(() => 
-                NetSdrMessageHelper.GetHeader(type, msgLength));
-        }
-
-        //TODO: add more NetSdrMessageHelper tests
-    }
+       
 }

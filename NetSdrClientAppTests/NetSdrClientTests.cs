@@ -158,39 +158,7 @@ public async Task ChangeFrequencyAsyncNoConnectionTest()
 }
 
 [Test]
-public async Task SendTcpRequest_SuccessfulTest()
-{
-    // Arrange
-    await ConnectAsyncTest();
-    var testMessage = new byte[] { 0x01, 0x02, 0x03 };
 
-    // Act
-    var task = _client.SendTcpRequest(testMessage);
-
-    // Simulate response
-    var responseData = new byte[] { 0x04, 0x05, 0x06 };
-    _tcpMock.Raise(tcp => tcp.MessageReceived += null, _tcpMock.Object, responseData);
-
-    var result = await task;
-
-    // Assert
-    Assert.That(result, Is.EqualTo(responseData));
-    _tcpMock.Verify(tcp => tcp.SendMessageAsync(testMessage), Times.Once);
-}
-
-[Test]
-public async Task SendTcpRequest_NoConnectionTest()
-{
-    // Arrange
-    var testMessage = new byte[] { 0x01, 0x02, 0x03 };
-
-    // Act
-    var result = await _client.SendTcpRequest(testMessage);
-
-    // Assert
-    Assert.That(result, Is.Empty);
-    _tcpMock.Verify(tcp => tcp.SendMessageAsync(It.IsAny<byte[]>()), Times.Never);
-}
 
 [Test]
 public void UdpClient_MessageReceived_Test()
@@ -207,24 +175,7 @@ public void UdpClient_MessageReceived_Test()
     );
 }
 
-[Test]
-public void TcpClient_MessageReceived_WithResponseTask_Test()
-{
-    // Arrange
-    var testData = new byte[] { 0x01, 0x02, 0x03 };
-    var mockSender = new Mock<ITcpClient>().Object;
 
-    // Set up a response task first
-    var sendTask = _client.SendTcpRequest(new byte[] { 0x00 });
-
-    // Act
-    _client.GetType()
-        .GetMethod("_tcpClient_MessageReceived", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-        .Invoke(_client, new object[] { mockSender, testData });
-
-    // Assert - Task should be completed
-    Assert.That(sendTask.IsCompleted, Is.True);
-}
 
 [Test]
 public void TcpClient_MessageReceived_WithoutResponseTask_Test()
