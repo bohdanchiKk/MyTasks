@@ -5,7 +5,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
+namespace NetSdrClient.Network
+{
 public class UdpClientWrapper : IUdpClient
 {
     private readonly IPEndPoint _localEndPoint;
@@ -82,4 +83,21 @@ public class UdpClientWrapper : IUdpClient
 
         return BitConverter.ToInt32(hash, 0);
     }
+    public override bool Equals(object? obj)
+    {
+        if (obj is not UdpClientWrapper other)
+            return false;
+
+        return _localEndPoint.Address.Equals(other._localEndPoint.Address) &&
+               _localEndPoint.Port == other._localEndPoint.Port;
+    }
+
+    public override int GetHashCode()
+    {
+        var payload = $"{nameof(UdpClientWrapper)}|{_localEndPoint.Address}|{_localEndPoint.Port}";
+        using var md5 = MD5.Create();
+        var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(payload));
+        return BitConverter.ToInt32(hash, 0);
+    }
+}
 }
