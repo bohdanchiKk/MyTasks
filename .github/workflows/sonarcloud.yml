@@ -129,6 +129,65 @@
 #           ${{ runner.temp }}\scanner\dotnet-sonarscanner begin /k:"bohdanchiKk_MyTasks" /o:"bohdanchikk-4" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 #           dotnet build
 #           ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+# name: SonarCloud analysis
+
+# on:
+#   push:
+#     branches: [ "master" ]
+#   pull_request:
+#     branches: [ "master" ]
+#   workflow_dispatch:
+
+# permissions:
+#   pull-requests: read # allows SonarCloud to decorate PRs with analysis results
+
+# jobs:
+#   sonar-check:
+#     name: Sonar Check
+#     runs-on: windows-latest   # безпечно для будь-яких .NET проектів
+#     steps:
+#       - uses: actions/checkout@v4
+#         with: { fetch-depth: 0 }
+
+#       - uses: actions/setup-dotnet@v4
+#         with:
+#           dotnet-version: '8.0.x'
+
+#       # 1) BEGIN: SonarScanner for .NET
+#       - name: SonarScanner Begin
+#         run: |
+#               dotnet tool install --global dotnet-sonarscanner
+#               echo "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
+#               dotnet sonarscanner begin `
+#               /k:"bohdanchiKk_MyTasks" `
+#               /o:"bohdanchikk-4" `
+#               /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
+#               /d:sonar.cs.opencover.reportsPaths="**/coverage.xml" `
+#               /d:sonar.cpd.cs.minimumTokens=40 `
+#               /d:sonar.cpd.cs.minimumLines=5 `
+#               /d:sonar.exclusions=**/bin/**,**/obj/**,**/sonarcloud.yml `
+#               /d:sonar.qualitygate.wait=true
+#         shell: pwsh
+#       # 2) BUILD & TEST
+#       - name: Restore
+#         run: dotnet restore NetSdrClient.sln
+#       - name: Build
+#         run: dotnet build NetSdrClient.sln -c Release --no-restore
+
+#       - name: Tests with coverage (OpenCover) master
+#         run: |
+#          dotnet test NetSdrClientAppTests/NetSdrClientAppTests.csproj -c Release --no-build `
+#            /p:CollectCoverage=true `
+#            /p:CoverletOutput=TestResults/coverage.xml `
+#            /p:CoverletOutputFormat=opencover
+#         shell: pwsh
+#       # 3) END: SonarScanner
+#       - name: SonarScanner End
+#         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+#         shell: pwsh
+
+
+
 name: SonarCloud analysis
 
 on:
@@ -156,30 +215,43 @@ jobs:
       # 1) BEGIN: SonarScanner for .NET
       - name: SonarScanner Begin
         run: |
-              dotnet tool install --global dotnet-sonarscanner
-              echo "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
-              dotnet sonarscanner begin `
-              /k:"bohdanchiKk_MyTasks" `
-              /o:"bohdanchikk-4" `
-              /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
-              /d:sonar.cs.opencover.reportsPaths="**/coverage.xml" `
-              /d:sonar.cpd.cs.minimumTokens=40 `
-              /d:sonar.cpd.cs.minimumLines=5 `
-              /d:sonar.exclusions=**/bin/**,**/obj/**,**/sonarcloud.yml `
-              /d:sonar.qualitygate.wait=true
+          dotnet tool install --global dotnet-sonarscanner
+          echo "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
+          dotnet sonarscanner begin `
+          /k:"bohdanchiKk_MyTasks" `
+          /o:"bohdanchikk-4" `
+          /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
+          /d:sonar.cs.opencover.reportsPaths="**/TestResults/*.coverage.xml" `
+          /d:sonar.cpd.cs.minimumTokens=40 `
+          /d:sonar.cpd.cs.minimumLines=5 `
+          /d:sonar.exclusions=**/bin/**,**/obj/**,**/sonarcloud.yml `
+          /d:sonar.qualitygate.wait=true
         shell: pwsh
       # 2) BUILD & TEST
       - name: Restore
         run: dotnet restore NetSdrClient.sln
       - name: Build
         run: dotnet build NetSdrClient.sln -c Release --no-restore
-
-      - name: Tests with coverage (OpenCover) master
+      - name: Tests with coverage (OpenCover)
         run: |
-         dotnet test NetSdrClientAppTests/NetSdrClientAppTests.csproj -c Release --no-build `
-           /p:CollectCoverage=true `
-           /p:CoverletOutput=TestResults/coverage.xml `
-           /p:CoverletOutputFormat=opencover
+          New-Item -ItemType Directory -Force -Path "TestResults" | Out-Null
+      
+          # NetSdrClientApp
+          dotnet test NetSdrClientAppTests/NetSdrClientAppTests.csproj -c Release --no-build `
+            /p:CollectCoverage=true `
+            /p:CoverletOutput="TestResults/NetSdrClientApp.coverage.xml" `
+            /p:CoverletOutputFormat=opencover `
+            /p:Exclude="[EchoServer]*"
+
+          # EchoServer
+          dotnet test EchoServerTest1/EchoServerTest.csproj -c Release --no-build `
+            /p:CollectCoverage=true `
+            /p:CoverletOutput="TestResults/EchoServer11.coverage.xml" `
+            /p:CoverletOutputFormat=opencover `
+            /p:Exclude="[*Tests]*"
+
+          # подивимось, що реально створилось
+          dir TestResults
         shell: pwsh
       # 3) END: SonarScanner
       - name: SonarScanner End
